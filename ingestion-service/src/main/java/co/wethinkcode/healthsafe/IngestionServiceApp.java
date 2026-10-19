@@ -12,8 +12,11 @@ public class IngestionServiceApp {
 
     public static void main(String[] args) throws Exception {
         Javalin app = Javalin.create().start(7030);
-
+        List<Ward> wards =  readCsv();
         app.get("/health", ctx -> ctx.result("OK"));
+        app.get("/wards",ctx ->{
+            ctx.json(wards);
+        });
 
         readCsv();
     }
@@ -61,7 +64,8 @@ public class IngestionServiceApp {
         }
     }
 
-    public static void readCsv() throws Exception {
+    public static List<Ward> readCsv() throws Exception {
+        List<Ward> readRows = new ArrayList<>();
         InputStream file = IngestionServiceApp.class.getResourceAsStream("/wards-outdated.csv");
         if (file == null) {
             throw new IllegalStateException("file not found");
@@ -73,7 +77,6 @@ public class IngestionServiceApp {
             String[] row = csvReader.readNext();
 
             Set<String> cleanedRows = new HashSet<>();
-            List<String> readRows = new ArrayList<>();
             while (row != null) {
                 for (int i = 0; i < row.length; i++) {
                     row[i] = row[i].trim();
@@ -100,10 +103,12 @@ public class IngestionServiceApp {
                     }
                     row[3] = normalizeBeds(row[3]);
 
-                    readRows.add(Arrays.toString(row));
+                   Ward cleanedWard = new Ward(row[0], row[1], row[2], row[3]);
+                   readRows.add(cleanedWard);
                 }
                 row = csvReader.readNext();
             }
         }
+        return readRows;
     }
 }
