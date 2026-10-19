@@ -1,10 +1,8 @@
 package co.wethinkcode.healthsafe;
 
 import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 import io.javalin.Javalin;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -17,9 +15,6 @@ public class IngestionServiceApp {
 
         app.get("/health", ctx -> ctx.result("OK"));
 
-        // TODO: read and clean src/main/resources/wards-outdated.csv (wards, wings, specialist departments data —
-        // trim whitespace, fix casing, normalize dates/booleans) and expose the
-        // cleaned records here for the other services to consume.
         readCsv();
     }
 
@@ -39,6 +34,32 @@ public class IngestionServiceApp {
         return result.trim();
     }
 
+    private static String normalizeBeds(String value) {
+        if (value == null || value.isBlank()) {
+            return "unknown";
+        }
+
+        String cleaned = value.trim().toLowerCase();
+
+        if (cleaned.equals("five")) {
+            return "5";
+        }
+        if (cleaned.equals("n/a") ||
+                cleaned.equals("tbd") ||
+                cleaned.equals("unknown")) {
+            return "unknown";
+        }
+        try {
+            int number = Integer.parseInt(cleaned);
+            if (number < 0) {
+                return "invalid";
+            }
+            return cleaned;
+
+        } catch (NumberFormatException e) {
+            return "unknown";
+        }
+    }
 
     public static void readCsv() throws Exception {
         InputStream file = IngestionServiceApp.class.getResourceAsStream("/wards-outdated.csv");
@@ -72,16 +93,17 @@ public class IngestionServiceApp {
                     } else {
                         row[1] = "unknown";
                     }
-                    row[2] = normalizeWing(row[2]);
 
+                    row[2] = normalizeWing(row[2]);
+                    if(row[2].equals("Icu")){
+                        row[2] = "ICU";
+                    }
+                    row[3] = normalizeBeds(row[3]);
 
                     readRows.add(Arrays.toString(row));
-
                 }
                 row = csvReader.readNext();
             }
-            System.out.println(readRows);
-
         }
     }
 }
