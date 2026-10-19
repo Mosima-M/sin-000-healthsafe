@@ -1,18 +1,18 @@
 package co.wethinkcode.healthsafe;
 
 public class Ward {
-    private String hubId;
+    private String wardId;
     private String department;
     private String wing;
     private String bedsAvailable;
 
-    public Ward(String hubId, String wing, String department, String bedsAvailable){
-        this.hubId = hubId;
+    public Ward(String wardId, String wing, String department, String bedsAvailable){
+        this.wardId = wardId;
         this.wing = wing;
         this.department = department;
         this.bedsAvailable = bedsAvailable;
     }
-    public String getHubId(){return hubId;}
+    public String getWardId(){return wardId;}
     public String getWing(){return wing;}
     public String getDepartment(){return department;}
     public String getBedsAvailable(){return bedsAvailable;}

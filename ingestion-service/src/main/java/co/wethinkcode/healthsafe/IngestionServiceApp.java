@@ -17,8 +17,6 @@ public class IngestionServiceApp {
         app.get("/wards",ctx ->{
             ctx.json(wards);
         });
-
-        readCsv();
     }
 
     private static String normalizeWing(String wing) {
