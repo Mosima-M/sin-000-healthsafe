@@ -2,6 +2,8 @@
 package co.wethinkcode.healthsafe;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
+import java.util.List;
 import java.util.Optional;
 import io.javalin.Javalin;
 
@@ -31,6 +33,17 @@ public class WardServiceApp {
             } catch (Exception e) {
                 ctx.status(502)
                         .result("Ingestion Service unavailable");
+            }
+        });
+
+
+        app.get("/departments", ctx -> {
+            try {
+                List<String> departments = wardService.getDepartments();
+                ctx.json(departments);
+
+            } catch (Exception e) {
+                ctx.status(502).result("Ingestion Service unavailable");
             }
         });
 

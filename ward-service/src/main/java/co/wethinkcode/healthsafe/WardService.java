@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.*;
 
 public class WardService {
 
@@ -31,4 +31,25 @@ public class WardService {
 
         return Optional.empty();
     }
+
+
+    public List<String> getDepartments()
+            throws IOException, InterruptedException {
+
+        String json = ingestionClient.getAllWards();
+        JsonNode wards = mapper.readTree(json);
+
+        Set<String> departments = new TreeSet<>();
+
+        for (JsonNode ward : wards) {
+            String department = ward.path("department").asText();
+
+            if (!department.isEmpty()) {
+                departments.add(department);
+            }
+        }
+
+        return new ArrayList<>(departments);
+    }
+
 }
