@@ -8,6 +8,8 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static co.wethinkcode.healthsafe.WardCleaner.normalizeBeds;
+
 public class IngestionServiceApp {
 
     public static void main(String[] args) throws Exception {
@@ -17,49 +19,6 @@ public class IngestionServiceApp {
         app.get("/wards",ctx ->{
             ctx.json(wards);
         });
-    }
-
-    private static String normalizeWing(String wing) {
-        wing = wing.replaceAll("\\s+", " ").trim();
-
-        String[] words = wing.toLowerCase().split(" ");
-        String result = "";
-
-        for (String word : words) {
-            if (!word.isEmpty()) {
-                result += word.substring(0, 1).toUpperCase()
-                        + word.substring(1) + " ";
-            }
-        }
-
-        return result.trim();
-    }
-
-    private static String normalizeBeds(String value) {
-        if (value == null || value.isBlank()) {
-            return "unknown";
-        }
-
-        String cleaned = value.trim().toLowerCase();
-
-        if (cleaned.equals("five")) {
-            return "5";
-        }
-        if (cleaned.equals("n/a") ||
-                cleaned.equals("tbd") ||
-                cleaned.equals("unknown")) {
-            return "unknown";
-        }
-        try {
-            int number = Integer.parseInt(cleaned);
-            if (number < 0) {
-                return "invalid";
-            }
-            return cleaned;
-
-        } catch (NumberFormatException e) {
-            return "unknown";
-        }
     }
 
     public static List<Ward> readCsv() throws Exception {
@@ -83,7 +42,7 @@ public class IngestionServiceApp {
                 boolean first = cleanedRows.add(row[0]);
                 if (!row[0].isEmpty() && first) {
                     if (!row[1].isEmpty()) {
-                        row[1] = normalizeWing(row[1]);
+                        row[1] = WardCleaner.normalizeWing(row[1]);
 
                         switch (row[1]) {
                             case "northwing" -> row[1] = "North Wing";
@@ -95,7 +54,7 @@ public class IngestionServiceApp {
                         row[1] = "unknown";
                     }
 
-                    row[2] = normalizeWing(row[2]);
+                    row[2] = WardCleaner.normalizeWing(row[2]);
                     if(row[2].equals("Icu")){
                         row[2] = "ICU";
                     }
