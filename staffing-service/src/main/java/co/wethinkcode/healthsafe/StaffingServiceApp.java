@@ -1,6 +1,7 @@
 
 package co.wethinkcode.healthsafe;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
 import java.util.Map;
 
@@ -15,6 +16,8 @@ public class StaffingServiceApp {
 
         StaffingService staffingService =
                 new StaffingService(wardClient, alertLevelClient);
+        StaffingEventPublisher publisher = new StaffingEventPublisher();
+        ObjectMapper mapper = new ObjectMapper();
 
         app.get("/health", ctx -> ctx.result("OK"));
 
@@ -30,7 +33,11 @@ public class StaffingServiceApp {
                     return;
                 }
 
+                String message = mapper.writeValueAsString(schedule);
+                publisher.publish(message);
+
                 ctx.json(schedule);
+
 
             } catch (Exception e) {
                 ctx.status(502).result("Dependent service unavailable");
