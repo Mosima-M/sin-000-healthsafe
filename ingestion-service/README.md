@@ -1,95 +1,164 @@
-# IngestionServiceApp
+# Ingestion Service
 
 ## Overview
 
-Parses and cleans `wards-outdated.csv`, a messy legacy export of wards, wings, and specialist departments data, and is the
-first stop in the HealthSafe pipeline. Independent Maven module, no parent pom.
+The Ingestion Service is responsible for reading, cleaning, and exposing ward data from the legacy `wards-outdated.csv` dataset.
 
-Part of the [HealthSafe](../README.md) project.
+It forms the first stage of the HealthSafe system and provides standardized ward records that other services can retrieve through REST.
 
-REST: exposes the cleaned records for `ward-service` (`../ward-service`) to
-consume — see [Integration contracts](../README.md#integration-contracts) in the
-root README for the endpoint shape.
+The service is an independent Maven module running on port `7030`.
 
-## Example: one row cleaned
+## Responsibilities
 
-Input (`wards-outdated.csv`, row 6):
+The service is designed to:
 
-```
+- Read ward records from the CSV dataset using OpenCSV.
+- Remove unnecessary whitespace from field values.
+- Normalize ward identifiers and text fields.
+- Handle missing, invalid, and non-numeric bed availability values.
+- Identify duplicate ward records.
+- Expose cleaned ward information through a REST API.
+
+## Dataset
+
+The CSV file contains four fields:
+
+| Field | Description |
+|---|---|
+| `ward_id` | Unique ward identifier |
+| `Wing` | Hospital wing |
+| `department` | Medical department |
+| `beds_available` | Number of available beds |
+
+### Data Cleaning
+
+The implementation separates CSV reading from data normalization.
+
+- `WardCsvReader` handles reading and parsing the CSV records.
+- `WardCleaner` contains the field-cleaning and normalization logic.
+
+The cleaning process addresses inconsistent casing, surrounding whitespace, missing values, and invalid numeric representations.
+
+### Example
+
+**Original CSV record:**
+
+```csv
 w-05,east wing ,PAEDIATRICS,five
 ```
 
-Expected shape after cleaning (exact field names are up to you — this illustrates
-the *kind* of transform expected, not a fixed schema to match exactly):
+**Illustrative normalized fields:**
 
-```json
-{
-  "wardId": "W-05",
-  "wing": "East Wing",
-  "department": "Paediatrics",
-  "bedsAvailable": null,
-  "notes": "bedsAvailable was non-numeric ('five') — flagged for follow-up"
-}
+```text
+Ward ID: W-05
+Wing: East Wing
+Department: Paediatrics
+Beds available: unknown
 ```
 
-Note this row is also a near-duplicate of `W-05` two rows above it (same real ward,
-different ID casing and field values) — deciding how to merge or flag duplicates
-like this is part of the exercise.
+The example demonstrates the intended normalization. The exact output for duplicate records and invalid bed values depends on the implemented cleaning rules.
 
-## Known data issues
+## REST API
 
-`wards-outdated.csv` is deliberately messy — cleaning it is the point of this service. Look
-out for (and handle) at least:
+**Base URL:** `http://localhost:7030`
 
-- **Inconsistent casing** in IDs, names, and status/category values (`Active` /
-  `active` / `ACTIVE`)
-- **Padding** — leading/trailing spaces, and the occasional double space, inside
-  fields
-- **Duplicate records** for the same real-world entity, written with a different ID
-  casing/format and/or slightly different field values
-- **Inconsistent date formats** (`YYYY-MM-DD`, `MM/DD/YYYY`, `DD-MM-YYYY`, one- and
-  two-digit months/days) and outright invalid dates
-- **Missing / placeholder values** — blank fields, `N/A`, `n/a`, `TBD`, `unknown`,
-  `-`, `NaN`
-- **Invalid or non-numeric values** in numeric columns (negative counts, spelled-out
-  numbers, unrealistic values)
-- **Inconsistent boolean/flag representations** (`Y`/`N`, `yes`/`no`, `1`/`0`,
-  `true`/`FALSE`)
-- **Naming/spelling variants** for the same thing (e.g. regional spelling
-  differences, synonyms)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Checks whether the service is running |
+| GET | `/wards` | Returns the cleaned ward records as JSON |
 
-## Project structure
+## Technologies
 
-```
-ingestion-service/
-├── pom.xml
-└── src/main/
-    ├── java/co/wethinkcode/healthsafe/IngestionServiceApp.java
-    └── resources/wards-outdated.csv
+- Java
+- Maven
+- Javalin
+- OpenCSV
+- Jackson
+
+## Build and Run
+
+From the `ingestion-service` directory:
+
+**Build:**
+
+```bash
+mvn clean package
 ```
 
-## Build
+**Run:**
 
-```
-mvn package
-```
-
-## Run
-
-```
+```bash
 java -jar target/ingestion-service.jar
 ```
 
-Listens on port `7030`. Currently just exposes `/health` — the actual CSV
-parsing/cleaning logic is a TODO.
+The service runs on port `7030`.
 
-## Test
+## Testing
 
-No automated tests yet. Manually verify it's up:
+The endpoints can be tested from Linux or Windows.
 
+### Linux / Git Bash
+
+**Health check:**
+
+```bash
+curl http://localhost:7030/health
 ```
-curl http://localhost:7030/health   # -> OK
+
+**Retrieve cleaned wards:**
+
+```bash
+curl http://localhost:7030/wards
 ```
 
-To add real tests, add JUnit 5 + the Surefire plugin to `pom.xml`, put tests under
-`src/test/java/co/wethinkcode/healthsafe/`, and run `mvn test`.
+### Windows PowerShell
+
+**Health check:**
+
+```powershell
+curl.exe http://localhost:7030/health
+```
+
+**Retrieve cleaned wards:**
+
+```powershell
+curl.exe http://localhost:7030/wards
+```
+
+The health endpoint should return:
+
+```text
+OK
+```
+
+The `/wards` endpoint should return the processed ward records in JSON format.
+
+To execute any configured automated tests:
+
+```bash
+mvn test
+```
+
+## Design Decisions
+
+### Separation of CSV Reading and Cleaning
+
+CSV parsing and data normalization are handled by separate classes.
+
+This makes the cleaning logic easier to maintain, test, and modify independently of file reading.
+
+### Centralized Data Preparation
+
+The Ingestion Service handles data preparation so downstream services can consume standardized records rather than repeatedly cleaning the original CSV.
+
+### REST-Based Data Access
+
+The cleaned records are exposed through an HTTP endpoint, allowing other HealthSafe services to retrieve the data without directly accessing the CSV file.
+
+## Limitations
+
+- The dataset is loaded from a local CSV file rather than a database.
+- Invalid or missing bed values require explicit handling and cannot always be converted into valid numbers.
+- The service does not provide an API for updating the original CSV dataset.
+
+For the overall architecture, see the [main HealthSafe README](../README.md).
